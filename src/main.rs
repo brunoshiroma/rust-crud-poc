@@ -47,11 +47,11 @@ async fn main() -> std::io::Result<()> {
     // Select a specific namespace / database
     db.use_ns("test").use_db("test").await.expect("Error on use surreal db test");
 
-    let created: Vec<Record> = db.create("person")
+    let created: Option<Record> = db.create("person")
     .content(Person {
         title: "Tester",
 marketing:false,
-    }).await.expect("Error on creating person");
+    }).await.expect("Error on creating person").unwrap();
     dbg!(created);
 
     HttpServer::new(move || {
