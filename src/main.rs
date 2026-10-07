@@ -2,14 +2,14 @@ use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use surrealdb::engine::local::Mem;
 use surrealdb::engine::local::Db;
-use surrealdb::sql::Thing;
+use surrealdb::engine::local::Mem;
+use surrealdb::types::{RecordId, SurrealValue};
 use surrealdb::Surreal;
 
 #[get("/")]
-async fn hello(db: web::Data<Surreal<Db>>) -> String  {
-    let result: Result<Vec<Record>, surrealdb::Error> = db.select("select * from person;").await;
+async fn hello(db: web::Data<Surreal<Db>>) -> String {
+    let result: Result<Vec<Record>, surrealdb::Error> = db.select("person").await;
 
     match result {
         Ok(res) => json!(res).to_string(),
@@ -26,32 +26,30 @@ async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there!")
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Person<'a> {
-    title: &'a str,
+#[derive(Debug, Serialize, Deserialize, SurrealValue)]
+struct Person {
+    title: String,
     marketing: bool,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, SurrealValue)]
 struct Record {
     #[allow(dead_code)]
-    id: Thing,
+    id: RecordId,
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-
     let db = Surreal::new::<Mem>(()).await.expect("Error initializing surreal");
 
-    
     // Select a specific namespace / database
     db.use_ns("test").use_db("test").await.expect("Error on use surreal db test");
 
     let created: Option<Record> = db.create("person")
     .content(Person {
-        title: "Tester",
-marketing:false,
-    }).await.expect("Error on creating person").unwrap();
+        title: "Tester".to_owned(),
+        marketing: false,
+    }).await.expect("Error on creating person");
     dbg!(created);
 
     HttpServer::new(move || {
